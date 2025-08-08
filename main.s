@@ -14,7 +14,8 @@
 
     .section .rodata
 
-__stack_size: .double 0x800
+# If you want to increase the stack size, a minimum of (40*SZ + 4) bytes is required.
+__stack_size: .dword 0x1000 # 4KB stack size
 
 # representation of knight moves in the form of (row_offset, col_offset) byte pairs
 knight_move_size: .byte 16 # 8 pairs of (row_offset, col_offset)
