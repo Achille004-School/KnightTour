@@ -38,8 +38,6 @@ starting_msg: .ascii "Starting knight's tour with size "
               .byte CHAR_SZ, CHAR_LF, 0
 stack_overflow_msg: .asciz "Stack overflow!\n"
 
-
-
     .text
 
 .globl main
@@ -81,16 +79,26 @@ main:
 # a5 row of last move
 # a6 col of last move
 recurse:
-    # Check if we have filled the board
-    mul t0, a2, a2  # size * size
-    bgeu a4, t0, recurse_print_moves
-
-    addi sp, sp, -44 # Allocate stack space
+    # Allocate stack space for the return address
+    addi sp, sp, -4
 
     addi t0, sp, __stack_size
     ld t1, __sp
     bltu t0, t1, stack_overflow
 
+    sw ra, 0(sp)  # Save board address
+
+    # Check if we have filled the board
+    mul t0, a2, a2  # size * size
+    bgeu a4, t0, recurse_print_moves
+
+    addi sp, sp, -40 # Allocate stack space
+
+    addi t0, sp, __stack_size
+    ld t1, __sp
+    bltu t0, t1, stack_overflow
+
+    # If the board is not filled, save the S registers for the recursion
     sw s0, 0(sp)  # Save board address
     sw s1, 4(sp)  # Save moves address
     sw s2, 8(sp)  # Save size
@@ -101,7 +109,6 @@ recurse:
     sw s7, 28(sp) # Save current knight move
     sw s8, 32(sp) # Save new row for loop
     sw s9, 36(sp) # Save new col for loop
-    sw ra, 40(sp) # Save return address
 
     mv s0, a0  # board
     mv s1, a1  # moves
@@ -172,6 +179,9 @@ recurse:
         mv a0, a1  # moves
         mv a1, a2  # size
         call print_moves
+
+        lw ra, 0(sp)  # Restore board address
+        addi sp, sp, 4  # Deallocate stack space
         ret
 
     recurse_end:
@@ -254,6 +264,9 @@ print_moves:
         j print_moves_loop
 
     print_moves_end:
+        li t4, CHAR_LF  # Line feed character
+        sb t4, 2(t2)  # Store space character in 4_byte
+
         li a0, 1  # File descriptor for stdout
         addi a1, t2, 2  # Address of the space char in space_4_byte
         li a2, 1  # Length of the character (space)
