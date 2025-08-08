@@ -1,9 +1,8 @@
-# NOTES: The mathematical minimum is 5.
+# NOTES: The mathematical minimum size is 5.
 #        If you use an odd size, you must start with an even number.
 .equ SZ, 5
 .equ STARTING_MOVE, 0 # a1
 
-.equ KNIGHT_MOVES, 16 # 8 pairs of (row_offset, col_offset)
 
 .equ CHAR_LF, 0x0A
 .equ CHAR_SP, 0x20
@@ -13,19 +12,12 @@
 .equ MOVES_SIZE, SZ*SZ
 .equ CHAR_SZ, (0x30 + SZ)
 
-.equ __stack_size, 0x7FF
+    .section .rodata
 
-    .data
-
-.globl __sp
-__sp: .double 0
-
-space_4_byte: .zero 4
-
-board: .zero MOVES_SIZE
-moves: .zero MOVES_SIZE
+__stack_size: .double 0x800
 
 # representation of knight moves in the form of (row_offset, col_offset) byte pairs
+knight_move_size: .byte 16 # 8 pairs of (row_offset, col_offset)
 knight_move_pairs: .byte 2, 1
                    .byte 1, 2
                    .byte -1, 2
@@ -38,7 +30,19 @@ starting_msg: .ascii "Starting knight's tour with size "
               .byte CHAR_SZ, CHAR_LF, 0
 stack_overflow_msg: .asciz "Stack overflow!\n"
 
-    .text
+    .section .data
+
+.globl __sp
+__sp: .double 0
+
+    .section .bss
+
+space_4_byte: .zero 4
+
+board: .zero MOVES_SIZE
+moves: .zero MOVES_SIZE
+
+    .section .text
 
 .globl main
 main:
@@ -82,7 +86,8 @@ recurse:
     # Allocate stack space for the return address
     addi sp, sp, -4
 
-    addi t0, sp, __stack_size
+    ld t0, __stack_size
+    add t0, sp, t0
     ld t1, __sp
     bltu t0, t1, stack_overflow
 
@@ -94,7 +99,8 @@ recurse:
 
     addi sp, sp, -40 # Allocate stack space
 
-    addi t0, sp, __stack_size
+    ld t0, __stack_size
+    add t0, sp, t0
     ld t1, __sp
     bltu t0, t1, stack_overflow
 
@@ -120,7 +126,8 @@ recurse:
 
     mv s7, zero # current knight_moves index
     recurse_for_loop:
-        slti t0, s7, KNIGHT_MOVES  # Check if we have exhausted all knight moves
+        lbu t0, knight_move_size  # Load the size of knight moves
+        sltu t0, s7, t0  # Check if we have exhausted all knight moves
         beqz t0, recurse_end
 
         # Calculate next move
@@ -223,9 +230,10 @@ get_value:
 print_moves:
     addi sp, sp, -8 # Allocate stack space
 
-    addi t0, sp, __stack_size
-    lw t1, __sp
-    blt t0, t1, stack_overflow
+    ld t0, __stack_size
+    add t0, sp, t0
+    ld t1, __sp
+    bltu t0, t1, stack_overflow
 
     sw s0, 0(sp)  # Save s0
     sw s1, 4(sp)  # Save s1
@@ -281,7 +289,8 @@ print_moves:
 
 .globl end
 end:
-    li a7, 10
+    li a0, 0
+    li a7, 93
     ecall
 
 .globl stack_overflow

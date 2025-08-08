@@ -36,6 +36,23 @@ Want to torture yourself with different board sizes? Edit the `.equ SZ, 5` line 
 
 **Another pro tip**: For odd board sizes, start with an even numbered square. (Again, if you really don't want to stare at a blank terminal)
 
+## Testing Your Solutions
+
+Included with this masochistic adventure is `test.py`, a Python validator that'll tell you if your Knight's Tour solutions are actually valid or if you've been staring at garbage output.
+
+**Features**:
+- ✅ Validates knight's tour solutions for any board size
+- ✅ Interactive input or load from file
+- ✅ Pretty board visualization
+- ✅ Detailed error reporting when your tours are broken
+
+**Usage**:
+```bash
+python test.py
+```
+
+**Disclaimer**: The testing script is AI-generated and reviewed by me. But still, do not consider it as my own work. It's just here to save you from manually counting chess squares like some medieval mathematician.
+
 ## Contributing
 
 Found a bug? Want to add features? Great! But remember:
