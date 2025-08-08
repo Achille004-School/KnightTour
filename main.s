@@ -18,7 +18,7 @@
     .data
 
 .globl __sp
-__sp: .word 0
+__sp: .double 0
 
 space_4_byte: .zero 4
 
@@ -45,11 +45,11 @@ stack_overflow_msg: .asciz "Stack overflow!\n"
 .globl main
 main:
     la t0, __sp  # Load address of initial stack pointer holder
-    sw sp, 0(t0)  # Store the initial stack pointer
+    sd sp, 0(t0)  # Store the initial stack pointer (64-bit)
 
     la a0, 1  # File descriptor for stdout
     la a1, starting_msg
-    li a2, 37  # Length
+    li a2, 36  # Length
     li a7, 64
     ecall
 
@@ -81,11 +81,15 @@ main:
 # a5 row of last move
 # a6 col of last move
 recurse:
+    # Check if we have filled the board
+    mul t0, a2, a2  # size * size
+    bgeu a4, t0, recurse_print_moves
+
     addi sp, sp, -44 # Allocate stack space
 
     addi t0, sp, __stack_size
-    lw t1, __sp
-    blt t0, t1, stack_overflow
+    ld t1, __sp
+    bltu t0, t1, stack_overflow
 
     sw s0, 0(sp)  # Save board address
     sw s1, 4(sp)  # Save moves address
@@ -102,11 +106,6 @@ recurse:
     mv s0, a0  # board
     mv s1, a1  # moves
     mv s2, a2  # size
-
-    # Check if we have filled the board
-    mul t0, s2, s2  # size * size
-    bgeu s4, t0, recurse_print_moves
-
     mv s3, a3  # knight move pairs address
     mv s4, a4  # current depth
     mv s5, a5  # row of last move
@@ -170,9 +169,10 @@ recurse:
 
     recurse_print_moves:
         # Print the moves
-        mv a0, s1  # moves
-        mv a1, s2  # size
+        mv a0, a1  # moves
+        mv a1, a2  # size
         call print_moves
+        ret
 
     recurse_end:
         lw s0, 0(sp)  # Restore board address
@@ -226,6 +226,10 @@ print_moves:
     mv t0, zero  # Index for moves
     mul t1, a1, a1  # Size of the moves array
     la t2, space_4_byte
+
+    li t4, CHAR_SP  # Space character
+    sb t4, 2(t2)  # Store space character in 4_byte
+
     print_moves_loop:
         bgeu t0, t1, print_moves_end  # If index >= size^2, end loop
 
@@ -240,9 +244,6 @@ print_moves:
         addi t4, t4, CHAR_1  # Convert to ASCII character
         sb t4, 1(t2)  # Store column character in space_4_byte
 
-        li t4, CHAR_SP  # Space character
-        sb t4, 2(t2)  # Store space character in 4_byte
-
         li a0, 1  # File descriptor for stdout
         mv a1, t2  # Address of the space_4_byte
         li a2, 3  # Length of the string (2 characters + space)
@@ -253,11 +254,8 @@ print_moves:
         j print_moves_loop
 
     print_moves_end:
-        li t4, CHAR_SP  # Space character
-        sb t4, 0(t2)  # Store space character in 4_byte
-
         li a0, 1  # File descriptor for stdout
-        mv a1, t2  # Address of the space_4_byte
+        addi a1, t2, 2  # Address of the space char in space_4_byte
         li a2, 1  # Length of the character (space)
         li a7, 64  # syscall for write
         ecall
