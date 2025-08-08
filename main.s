@@ -18,13 +18,14 @@ __stack_size: .double 0x800
 
 # representation of knight moves in the form of (row_offset, col_offset) byte pairs
 knight_move_size: .byte 16 # 8 pairs of (row_offset, col_offset)
-knight_move_pairs: .byte 2, 1
-                   .byte 1, 2
-                   .byte -1, 2
-                   .byte -2, 1
-                   .byte -2, -1
-                   .byte 1, -2
+knight_move_pairs: .byte 1, 2
+                   .byte 2, 1
                    .byte 2, -1
+                   .byte 1, -2
+                   .byte -1, -2
+                   .byte -2, -1
+                   .byte -2, 1
+                   .byte -1, 2
 
 starting_msg: .ascii "Starting knight's tour with size "
               .byte CHAR_SZ, CHAR_LF, 0
