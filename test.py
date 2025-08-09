@@ -93,7 +93,7 @@ def print_board(coordinates, board_size):
             board[row][col] = i + 1
     
     print("Board visualization (numbers show move order):")
-    print("   " + " ".join(chr(ord('a') + i) for i in range(board_size)))
+    print("   " + "  ".join(chr(ord('a') + i) for i in range(board_size)))
     
     for row in range(board_size - 1, -1, -1):
         print(f"{row + 1:2d} ", end="")

@@ -1,7 +1,8 @@
-# NOTES: The mathematical minimum size is 5.
+# NOTES: The mathematical minimum size is 5. I don't recommend using anything more than 9 (not supported by moves notation + too deep recursion).
 #        If you use an odd size, you must start with an even number.
 .equ SZ, 5
 .equ STARTING_MOVE, 0 # a1
+
 
 
 .equ CHAR_LF, 0x0A
@@ -14,8 +15,8 @@
 
     .section .rodata
 
-# If you want to increase the stack size, a minimum of (40*SZ + 4) bytes is required.
-__stack_size: .dword 0x1000 # 4KB stack size
+# If you want to increase the stack size, a minimum of (39*(SZ^2-1) + 8 + 16) = (39*SZ^2 - 15) bytes is required.
+__stack_size: .dword 0x1000 # 4KiB stack size
 
 # representation of knight moves in the form of (row_offset, col_offset) byte pairs
 knight_move_size: .byte 16 # 8 pairs of (row_offset, col_offset)
@@ -86,20 +87,20 @@ main:
 # a6 col of last move
 recurse:
     # Allocate stack space for the return address
-    addi sp, sp, -4
+    addi sp, sp, -8
 
     ld t0, __stack_size
     add t0, sp, t0
     ld t1, __sp
     bltu t0, t1, stack_overflow
 
-    sw ra, 0(sp)  # Save board address
+    sd ra, 0(sp)  # Save board address
 
     # Check if we have filled the board
     mul t0, a2, a2  # size * size
     bgeu a4, t0, recurse_print_moves
 
-    addi sp, sp, -40 # Allocate stack space
+    addi sp, sp, -31 # Allocate stack space
 
     ld t0, __stack_size
     add t0, sp, t0
@@ -107,16 +108,16 @@ recurse:
     bltu t0, t1, stack_overflow
 
     # If the board is not filled, save the S registers for the recursion
-    sw s0, 0(sp)  # Save board address
-    sw s1, 4(sp)  # Save moves address
-    sw s2, 8(sp)  # Save size
-    sw s3, 12(sp) # Save knight move pairs address
-    sw s4, 16(sp) # Save current depth
-    sw s5, 20(sp) # Save row of last move
-    sw s6, 24(sp) # Save column of last move
-    sw s7, 28(sp) # Save current knight move
-    sw s8, 32(sp) # Save new row for loop
-    sw s9, 36(sp) # Save new col for loop
+    sd s0, 0(sp)  # Save board address
+    sd s1, 8(sp)  # Save moves address
+    sb s2, 16(sp) # Save size
+    sd s3, 17(sp) # Save knight move pairs address
+    sb s4, 25(sp) # Save current depth
+    sb s5, 26(sp) # Save row of last move
+    sb s6, 27(sp) # Save column of last move
+    sb s7, 28(sp) # Save current knight_move index
+    sb s8, 29(sp) # Save new row for loop
+    sb s9, 30(sp) # Save new col for loop
 
     mv s0, a0  # board
     mv s1, a1  # moves
@@ -126,7 +127,7 @@ recurse:
     mv s5, a5  # row of last move
     mv s6, a6  # col of last move
 
-    mv s7, zero # current knight_moves index
+    mv s7, zero # current knight_move index
     recurse_for_loop:
         lbu t0, knight_move_size  # Load the size of knight moves
         sltu t0, s7, t0  # Check if we have exhausted all knight moves
@@ -189,23 +190,23 @@ recurse:
         mv a1, a2  # size
         call print_moves
 
-        lw ra, 0(sp)  # Restore board address
-        addi sp, sp, 4  # Deallocate stack space
+        ld ra, 0(sp)  # Restore board address
+        addi sp, sp, 8  # Deallocate stack space
         ret
 
     recurse_end:
-        lw s0, 0(sp)  # Restore board address
-        lw s1, 4(sp)  # Restore moves address
-        lw s2, 8(sp)  # Restore size
-        lw s3, 12(sp) # Restore knight move pairs address
-        lw s4, 16(sp) # Restore current depth
-        lw s5, 20(sp) # Restore row of last move
-        lw s6, 24(sp) # Restore column of last move
-        lw s7, 28(sp) # Restore current knight move
-        lw s8, 32(sp) # Restore new row for loop
-        lw s9, 36(sp) # Restore new col for loop
-        lw ra, 40(sp) # Restore return address
-        addi sp, sp, 44 # Deallocate stack space
+        ld s0, 0(sp)   # Restore board address
+        ld s1, 8(sp)   # Restore moves address
+        lbu s2, 16(sp) # Restore size
+        ld s3, 17(sp)  # Restore knight move pairs address
+        lbu s4, 25(sp) # Restore current depth
+        lbu s5, 26(sp)  # Restore row of last move
+        lbu s6, 27(sp)  # Restore column of last move
+        lbu s7, 28(sp)  # Restore current knight_move index
+        lbu s8, 29(sp)  # Restore new row for loop
+        lbu s9, 30(sp)  # Restore new col for loop
+        ld ra, 31(sp)   # Restore return address
+        addi sp, sp, 39 # Deallocate stack space
         ret
 
 # a0 board
@@ -230,15 +231,15 @@ get_value:
 # a0 moves
 # a1 size
 print_moves:
-    addi sp, sp, -8 # Allocate stack space
+    addi sp, sp, -16 # Allocate stack space
 
     ld t0, __stack_size
     add t0, sp, t0
     ld t1, __sp
     bltu t0, t1, stack_overflow
 
-    sw s0, 0(sp)  # Save s0
-    sw s1, 4(sp)  # Save s1
+    sd s0, 0(sp)  # Save s0
+    sd s1, 8(sp)  # Save s1
 
     mv s0, a0  # moves
     mv s1, a1  # size
@@ -283,9 +284,9 @@ print_moves:
         li a7, 64  # syscall for write
         ecall
 
-        lw s0, 0(sp)  # Restore s0
-        lw s1, 4(sp)  # Restore s1
-        addi sp, sp, 8  # Deallocate stack space
+        ld s0, 0(sp)  # Restore s0
+        ld s1, 8(sp)  # Restore s1
+        addi sp, sp, 16  # Deallocate stack space
 
         ret
 
